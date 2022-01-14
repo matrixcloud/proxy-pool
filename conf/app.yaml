@@ -1,9 +1,5 @@
 server:
   port: 5000
-db:
-  host: 'localhost'
-  port: 6379
-  pass: ''
 pool:
   maxThreshold: 100
   minThreshold: 10

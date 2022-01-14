@@ -6,7 +6,7 @@ import (
 
 // Pool used for manipulate proxies pool periodicly
 type Pool struct {
-	conn             *db.Client
+	db               *db.Client
 	maxThreshold     int
 	minThreshold     int
 	checkInterval    int
@@ -24,7 +24,7 @@ type Options struct {
 // NewPool returns a proxy pool instance
 func NewPool(conn *db.Client, opts Options) *Pool {
 	return &Pool{
-		conn:             conn,
+		db:               conn,
 		maxThreshold:     opts.MaxThreshold,
 		minThreshold:     opts.MinThreshold,
 		checkInterval:    opts.CheckInterval,
@@ -34,14 +34,14 @@ func NewPool(conn *db.Client, opts Options) *Pool {
 
 // Start proxy pool
 func (p *Pool) Start() {
-	go p.check()
-	go p.validate()
+	p.check()
+	p.validate()
 }
 
-func (p *Pool) size() int64 {
-	return p.conn.Length()
+func (p *Pool) size() int {
+	return p.db.Length()
 }
 
 func (p *Pool) isOverThreshold() bool {
-	return p.size() > int64(p.maxThreshold)
+	return p.size() > p.maxThreshold
 }

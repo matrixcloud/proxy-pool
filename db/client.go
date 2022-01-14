@@ -1,77 +1,61 @@
 package db
 
 import (
-	"errors"
-	"fmt"
-
-	"github.com/go-redis/redis/v7"
+	"sync"
+	"time"
 )
 
-// PROXIES is the proxies queue name
-const PROXIES = "proxies"
-
-// Client provides a API to manipulate proxies queue
+// Client provides a API to manipulate proxies
 type Client struct {
-	conn *redis.Client
+	mutex   sync.RWMutex
+	proxies []Proxy
+	// proxy address to index
+	indexer map[string]int
 }
 
-// Options used for client config
-type Options struct {
-	Host string
-	Port uint
-	Pass string
-}
-
-// NewClient creates a redis client agent
-func NewClient(options *Options) *Client {
-	client := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", options.Host, options.Port),
-		Password: options.Pass,
-		DB:       0,
-	})
+func NewClient() *Client {
 	return &Client{
-		conn: client,
+		proxies: make([]Proxy, 0),
+		indexer: make(map[string]int),
 	}
 }
 
-// Test checks redis connection
-func Test(c *Client) bool {
-	_, err := c.conn.Ping().Result()
-	if err != nil {
-		return false
+func (client *Client) Add(proxy Proxy) {
+	addr := proxy.Addr()
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+
+	if idx, ok := client.indexer[addr]; ok {
+		found := client.proxies[idx]
+		found.updatedAt = time.Now().UnixMilli()
+	} else {
+		proxy.createdAt = time.Now().UnixMilli()
+		proxy.updatedAt = time.Now().UnixMilli()
+		client.proxies = append(client.proxies, proxy)
 	}
-
-	return true
 }
 
-// Get gets proxy addresses
-func (c *Client) Get(count int64) []string {
-	proxies := c.conn.LRange(PROXIES, 0, count-1).Val()
-	c.conn.LTrim(PROXIES, count, -1)
-	return proxies
-}
+func (client *Client) Update(proxy Proxy) {
+	addr := proxy.Addr()
 
-// Push places a new proxy to queue
-func (c *Client) Push(proxy string) {
-	c.conn.LPush(PROXIES, proxy)
-}
-
-// Pop pops a proxy from queue
-func (c *Client) Pop() (string, error) {
-	cmd := c.conn.RPop(PROXIES)
-	if cmd.Err() != nil {
-		return "", errors.New("Proxy pool is empty")
+	if idx, ok := client.indexer[addr]; ok {
+		found := client.proxies[idx]
+		found.updatedAt = time.Now().UnixMilli()
 	}
-
-	return cmd.Val(), nil
 }
 
-// Length returns queue size
-func (c *Client) Length() int64 {
-	return c.conn.LLen(PROXIES).Val()
+func (client *Client) Remove(proxy Proxy) {
+	addr := proxy.Addr()
+
+	if idx, ok := client.indexer[addr]; ok {
+		client.proxies = append(client.proxies[:idx], client.proxies[idx+1:]...)
+	}
 }
 
-// Clear deletes all items
-func (c *Client) Clear() {
-	c.conn.Del(PROXIES)
+func (client *Client) Get(count int) []Proxy {
+	return make([]Proxy, 0)
+}
+
+func (client *Client) Length() int {
+	return len(client.proxies)
 }

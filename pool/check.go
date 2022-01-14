@@ -22,7 +22,7 @@ func (p *Pool) check() {
 	log.Println("Pool Checker started.")
 
 	for {
-		if p.conn.Length() < int64(p.minThreshold) {
+		if p.db.Length() < p.minThreshold {
 			p.get()
 			time.Sleep(time.Duration(p.checkInterval) * time.Second)
 		}

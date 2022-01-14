@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"os"
+	"path"
+
 	"github.com/matrixcloud/proxy-pool/db"
 	"github.com/matrixcloud/proxy-pool/pool"
 	"github.com/matrixcloud/proxy-pool/server"
 	"github.com/spf13/viper"
-	"log"
-	"os"
-	"path"
 )
 
 func main() {
@@ -20,22 +20,7 @@ func main() {
 		log.Fatalf("Faild read config file from %s", cfg)
 		return
 	}
-
-	// Config db
-	dbHost := viper.GetString("db.host")
-	dbPort := viper.GetUint("db.port")
-	dbPass := viper.GetString("db.pass")
-	dbOptions := db.Options{
-		Host: dbHost,
-		Port: dbPort,
-		Pass: dbPass,
-	}
-	conn := db.NewClient(&dbOptions)
-
-	if !db.Test(conn) {
-		log.Fatalf("Failed to connect to redis server: %s", fmt.Sprintf("%s:%d", dbHost, dbPort))
-		return
-	}
+	conn := db.NewClient()
 
 	// Config proxy pool
 	poolOptions := pool.Options{

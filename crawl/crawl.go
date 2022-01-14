@@ -8,18 +8,21 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/matrixcloud/proxy-pool/db"
 	"github.com/matrixcloud/proxy-pool/util"
 )
 
-// AddressProvider is a map
-var AddressProvider = map[string]func() []string{
+type Crawler func() []db.Proxy
+
+// Crawlers is a map
+var Crawlers = map[string]Crawler{
 	"kxdaili":   crawlKxdaili,
 	"data5u":    crawlData5u,
 	"xicidaili": crawlXicidaili,
 	"kuaidaili": crawlKuaidaili,
 }
 
-func crawlKuaidaili() []string {
+func crawlKuaidaili() []db.Proxy {
 	result := []string{}
 
 	for page := 1; page <= 3; page++ {

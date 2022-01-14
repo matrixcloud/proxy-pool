@@ -12,7 +12,7 @@ func (p *Pool) validate() {
 
 	for {
 		time.Sleep(time.Duration(p.validateInterval) * time.Second)
-		count := int(p.conn.Length() / 2)
+		count := int(p.db.Length() / 2)
 
 		// Wait to get new raw proxies
 		if count == 0 {
@@ -20,7 +20,7 @@ func (p *Pool) validate() {
 			continue
 		}
 
-		proxies := p.conn.Get(int64(count))
+		proxies := p.db.Get(count)
 		p.Test(proxies)
 	}
 }
@@ -32,7 +32,7 @@ func (p *Pool) Test(proxies []string) {
 	for _, proxy := range proxies {
 		if p.testOne(proxy) {
 			log.Printf("%s checked.\n", proxy)
-			p.conn.Push(proxy)
+			p.db.Push(proxy)
 		} else {
 			log.Printf("Invalid %s.\n", proxy)
 		}
