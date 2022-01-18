@@ -2,22 +2,22 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
-	"github.com/matrixcloud/proxy-pool/db"
+	"github.com/matrixcloud/proxy-pool/core"
+	"github.com/rs/zerolog/log"
 )
 
 // Server provides rest api
 type Server struct {
-	conn *db.Client
+	pool *core.Pool
 	port int
 }
 
 // NewServer creates a server
-func NewServer(conn *db.Client, port int) *Server {
+func NewServer(pool *core.Pool, port int) *Server {
 	return &Server{
-		conn: conn,
+		pool: pool,
 		port: port,
 	}
 }
@@ -32,16 +32,23 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) proxy(w http.ResponseWriter, r *http.Request) {
-	proxies := s.conn.Get(1)
+	proxies := s.pool.Get(1)
 
-	w.Write([]byte(proxies[0]))
+	if len(proxies) > 0 {
+		w.Write([]byte(proxies[0].Addr))
+	} else {
+		w.Write([]byte("empty"))
+	}
 }
 
 // Start starts api server
 func (s *Server) Start() {
+
 	http.HandleFunc("/", s.index)
 	http.HandleFunc("/health", s.health)
 	http.HandleFunc("/proxy", s.proxy)
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.port), nil))
+	log.Info().Msgf("Server is listening on: http://localhost:%d", s.port)
+
+	http.ListenAndServe(fmt.Sprintf(":%d", s.port), nil)
 }

@@ -2,84 +2,82 @@ package crawl
 
 import (
 	"fmt"
-	"log"
-	"math/rand"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/matrixcloud/proxy-pool/db"
+	"github.com/matrixcloud/proxy-pool/common"
 	"github.com/matrixcloud/proxy-pool/util"
+	"github.com/rs/zerolog/log"
 )
 
-type Crawler func() []db.Proxy
+type Crawler func() []common.Proxy
 
 // Crawlers is a map
 var Crawlers = map[string]Crawler{
-	"kxdaili":   crawlKxdaili,
-	"data5u":    crawlData5u,
-	"xicidaili": crawlXicidaili,
-	"kuaidaili": crawlKuaidaili,
+	"kxdaili": crawlKxdaili,
+	// "kuaidaili": crawlKuaidaili,
+	// "data5u":    crawlData5u,
+	// "xicidaili": crawlXicidaili,
 }
 
-func crawlKuaidaili() []db.Proxy {
-	result := []string{}
+func crawlKuaidaili() []common.Proxy {
+	result := []common.Proxy{}
 
 	for page := 1; page <= 3; page++ {
 		url := fmt.Sprintf("https://www.kuaidaili.com/free/inha/%d", page)
-		log.Printf("Start to crawl %s", url)
+		log.Info().Msgf("Start to crawl %s", url)
 
 		doc, err := util.GetPage(url)
 		if err != nil {
-			log.Println(err)
+			log.Err(err)
 			continue
 		}
 
 		doc.Find("#list > table > tbody > tr").Each(func(i int, s *goquery.Selection) {
 			ip := strings.TrimSpace(s.Find("td[data-title='IP']").Text())
-			port := strings.TrimSpace(s.Find("td[data-title='PORT']").Text())
-			schema := strings.TrimSpace(s.Find("td[data-title='类型']").Text())
+			iport, _ := strconv.Atoi(strings.TrimSpace(s.Find("td[data-title='PORT']").Text()))
+			port := uint16(iport)
+			schema := strings.ToLower(strings.TrimSpace(s.Find("td[data-title='类型']").Text()))
 
-			result = append(result, fmt.Sprintf("%s://%s:%s", strings.ToLower(schema), ip, port))
+			result = append(result, *common.NewProxy(schema, ip, port))
 		})
-
-		time.Sleep(time.Duration(1+rand.Intn(2)) * time.Second)
 	}
 
 	return result
 }
 
-func crawlKxdaili() []string {
-	result := []string{}
+func crawlKxdaili() []common.Proxy {
+	result := []common.Proxy{}
 	url := "http://www.kxdaili.com/dailiip.html"
-	log.Printf("Start to crawl %s", url)
+	log.Debug().Msgf("Start to crawl %s", url)
 
 	doc, err := util.GetPage(url)
 	if err != nil {
-		log.Println(err)
-		return result
+		log.Err(err)
+		return nil
 	}
 
 	doc.Find(".hot-product-content > table > tbody > tr").Each(func(i int, s *goquery.Selection) {
 		ip := strings.TrimSpace(s.Find(":nth-child(1)").Text())
-		port := strings.TrimSpace(s.Find(":nth-child(2)").Text())
-		schema := strings.TrimSpace(s.Find(":nth-child(4)").Text())
+		port, _ := strconv.Atoi(strings.TrimSpace(s.Find(":nth-child(2)").Text()))
+		schema := strings.ToLower(strings.TrimSpace(s.Find(":nth-child(4)").Text()))
 
-		result = append(result, fmt.Sprintf("%s://%s:%s", strings.ToLower(schema), ip, port))
+		result = append(result, *common.NewProxy(schema, ip, uint16(port)))
 	})
 
 	return result
 }
 
-func crawlData5u() []string {
-	result := []string{}
+func crawlData5u() []common.Proxy {
+	result := []common.Proxy{}
 	url := "http://www.data5u.com/"
 	log.Printf("Start to crawl %s", url)
 
 	doc, err := util.GetPage(url)
 
 	if err != nil {
-		log.Println(err)
+		log.Err(err)
 		return result
 	}
 
@@ -89,17 +87,17 @@ func crawlData5u() []string {
 		}
 
 		ip := strings.TrimSpace(s.Find("span:nth-child(1) > li").Text())
-		port := strings.TrimSpace(s.Find("span:nth-child(2) > li").Text())
+		port, _ := strconv.Atoi(strings.TrimSpace(s.Find("span:nth-child(2) > li").Text()))
 		schema := strings.TrimSpace(s.Find("span:nth-child(4) > li").Text())
 
-		result = append(result, fmt.Sprintf("%s://%s:%s", strings.ToLower(schema), ip, port))
+		result = append(result, *common.NewProxy(schema, ip, uint16(port)))
 	})
 
 	return result
 }
 
-func crawlXicidaili() []string {
-	result := []string{}
+func crawlXicidaili() []common.Proxy {
+	result := []common.Proxy{}
 
 	for page := 1; page <= 3; page++ {
 		url := fmt.Sprintf("https://www.xicidaili.com/nn/%d", page)
@@ -108,7 +106,7 @@ func crawlXicidaili() []string {
 		doc, err := util.GetPage(url)
 
 		if err != nil {
-			log.Println(err)
+			log.Err(err)
 			return result
 		}
 
@@ -118,13 +116,11 @@ func crawlXicidaili() []string {
 			}
 
 			ip := strings.TrimSpace(s.Find("td:nth-child(2)").Text())
-			port := strings.TrimSpace(s.Find("td:nth-child(3)").Text())
+			port, _ := strconv.Atoi(strings.TrimSpace(s.Find("td:nth-child(3)").Text()))
 			schema := strings.TrimSpace(s.Find("td:nth-child(6)").Text())
 
-			result = append(result, fmt.Sprintf("%s://%s:%s", strings.ToLower(schema), ip, port))
+			result = append(result, *common.NewProxy(schema, ip, uint16(port)))
 		})
-
-		time.Sleep(time.Duration(1+rand.Intn(2)) * time.Second)
 	}
 
 	return result

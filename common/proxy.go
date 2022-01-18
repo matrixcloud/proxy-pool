@@ -1,36 +1,29 @@
-package db
+package common
 
 import "fmt"
 
 type Proxy struct {
-	/* 0 is all (http, https)
-	 * 1 is http
-	 * 2 is https
-	 */
-	protocol  byte
+	// http, https, none
+	schema    string
 	ip        string
 	port      uint16
-	addr      string
+	Addr      string
 	country   string
 	location  string
 	latency   uint16
 	anonymous bool
-	validated bool
-	createdAt int64
-	updatedAt int64
+	Validated bool
+	CreatedAt int64
+	UpdatedAt int64
 }
 
-func NewProxy(ip string, port uint16) *Proxy {
+func NewProxy(schema string, ip string, port uint16) *Proxy {
 	return &Proxy{
-		ip:   ip,
-		port: port,
-		addr: fmt.Sprintf("%v:%d", ip, port),
+		schema: schema,
+		ip:     ip,
+		port:   port,
+		Addr:   fmt.Sprintf("%v://%v:%d", schema, ip, port),
 	}
-}
-
-func (proxy *Proxy) Protocol(protocol byte) *Proxy {
-	proxy.protocol = protocol
-	return proxy
 }
 
 func (proxy *Proxy) Country(country string) *Proxy {
