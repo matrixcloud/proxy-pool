@@ -29,14 +29,18 @@ func main() {
 		viper.GetInt("pool.maxThreshold"),
 	)
 
-	// create scheduler
-	shed := core.NewScheduler(pool)
+	// create fetcher
+	fr := core.NewFetcher(pool)
+
+	// create validater
+	vr := core.NewValidater(pool)
 
 	// Config api server
 	port := viper.GetInt("server.port")
 	svr := server.NewServer(pool, port)
 
-	// start scheduler & server
-	shed.Start()
+	// start fetcher, validater & server
+	fr.Start()
+	vr.Start()
 	svr.Start()
 }
